@@ -1,92 +1,107 @@
 from fastapi import FastAPI, File, UploadFile
 import pandas as pd
+import matplotlib.pyplot as plt
 from io import StringIO
-from typing import List
-from pydantic import BaseModel
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import VotingClassifier
-from imblearn.over_sampling import RandomOverSampler
-from xgboost import XGBClassifier
-from imblearn.over_sampling import SMOTE
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, StackingRegressor, VotingRegressor
+from sklearn.linear_model import Ridge, Lasso, ElasticNet
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+import numpy as np
 
 app = FastAPI()
 
 # Load the dataset
 df = pd.read_csv('genz_money_spends.csv')
 
-#Adding ratios to better understand the model
+# Feature Engineering
 df['Income_on_Rent'] = df['Rent (USD)'] / df['Income (USD)']
 df['Savings'] = df['Savings (USD)'] / df['Income (USD)']
-df['Essentials'] = (df['Rent (USD)'] + df['Groceries (USD)']) / df[['Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Entertainment (USD)', 
+df['Essentials'] = (df['Rent (USD)'] + df['Groceries (USD)']) / df[['Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Entertainment (USD)',
                      'Subscription Services (USD)', 'Education (USD)', 'Online Shopping (USD)', 
                      'Savings (USD)', 'Investments (USD)', 'Travel (USD)', 'Fitness (USD)', 
                      'Miscellaneous (USD)']].sum(axis=1)
 
-# print(df['Income_on_Rent'])
-# print(df['Savings'])
-# print(df['Essentials'])
-
-
-# Print the columns of the DataFrame to verify their names
-# print("Columns in the dataset:", df.columns)
-
-# Create a 'Category' column by aggregating existing columns
 df['Category'] = df[['Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Entertainment (USD)', 
                      'Subscription Services (USD)', 'Education (USD)', 'Online Shopping (USD)', 
                      'Savings (USD)', 'Investments (USD)', 'Travel (USD)', 'Fitness (USD)', 
                      'Miscellaneous (USD)']].sum(axis=1)
 
-# Convert 'Category' to categorical by binning (optional)
-df['Category'] = pd.cut(df['Category'], bins=5, labels=False)
-
-# Feature Engineering
-X = df[['Age', 'Income (USD)', 'Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)']]  # Add more features
+# Feature Set and Target
+X = df[['Age', 'Income (USD)', 'Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Income_on_Rent', 'Savings', 'Essentials']]  # Add more features
 y = df['Category']
-
-
-
-
-# Scale the features
 
 # Train-Test Split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# To handle unbalanced datasets
-# smote = SMOTE(random_state=42, sampling_strategy='auto')
-# # print(y_train.value_counts())
-# X_train , y_train = smote.fit_resample(X_train, y_train)
-
-# ros = RandomOverSampler(random_state=42)
-# X_train, y_train = ros.fit_resample(X_train, y_train)
-
+# Scale the features
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
+# Base Models for the Stacking Model
+base_models = [
+    ('rf', RandomForestRegressor(random_state=42)),
+    ('gb', GradientBoostingRegressor(random_state=42)),
+    ('svr', SVR(kernel='rbf')),
+    ('knn', KNeighborsRegressor())
+]
 
-xgb = XGBClassifier(n_estimators = 500, learning_rate = 0.8, random_state = 42)
-xgb.fit(X_train, y_train)
+# Define the meta-model (Lasso in this case)
+meta_model = Lasso(alpha=0.1)
 
+# Initialize the Stacking Regressor with Lasso as the meta-model
+stacking_model = StackingRegressor(estimators=base_models, final_estimator=meta_model)
 
-# Model Selection and Training with increased max_iter and solver
-# model = LogisticRegression(max_iter=1000, solver='lbfgs', class_weight='balanced')  # Adding class_weight
-# model.fit(X_train, y_train)
+# Fit the Stacking Model
+stacking_model.fit(X_train, y_train)
 
-# Evaluation
-y_pred = xgb.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Model Accuracy: {accuracy}")
+# Evaluate the model
+stacking_pred = stacking_model.predict(X_test)
+stacking_mse = mean_squared_error(y_test, stacking_pred)
+stacking_r2 = r2_score(y_test, stacking_pred)
 
-# Additional Evaluation Metrics
-print("Classification Report:\n", classification_report(y_test, y_pred))
-print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+# Print Evaluation Metrics for Stacking Model
+print(f"Stacking Model MSE: {stacking_mse}")
+print(f"Stacking Model R² Score: {stacking_r2}")
 
-# Prediction (example: predicting for a new data point)
-new_data = pd.DataFrame({'Age': [25], 'Income (USD)': [50000], 'Rent (USD)': [1000], 'Groceries (USD)': [300], 'Eating Out (USD)': [200]})
-new_data_scaled = scaler.transform(new_data)
-prediction = xgb.predict(new_data_scaled)
+# Feature Importance using RandomForest (as it gives more meaningful feature importance)
+rf_model = RandomForestRegressor(random_state=42)
+rf_model.fit(X_train, y_train)
 
-print(f"Prediction: {prediction}")
+# Get feature importance
+feature_importance = rf_model.feature_importances_
+
+# Visualize Feature Importance
+features = X.columns
+plt.barh(features, feature_importance)
+plt.xlabel("Feature Importance")
+plt.title("Feature Importance for Random Forest Model")
+plt.show()
+
+# Plot Partial Dependence to see the relationship between features and the target variable
+plot_partial_dependence(rf_model, X_train, features=[0, 1, 2, 3, 4],  # Modify the feature indices based on your feature list
+                        feature_names=features, target=y_train)
+plt.show()
+
+# Sensitivity Analysis - Simulate different expense distributions and observe their impact
+new_data_scenarios = [
+    {'Age': 25, 'Income (USD)': 50000, 'Rent (USD)': 1000, 'Groceries (USD)': 300, 'Eating Out (USD)': 200, 
+     'Income_on_Rent': 0.02, 'Savings': 0.1, 'Essentials': 0.4},  # baseline scenario
+    {'Age': 25, 'Income (USD)': 50000, 'Rent (USD)': 1200, 'Groceries (USD)': 250, 'Eating Out (USD)': 200, 
+     'Income_on_Rent': 0.024, 'Savings': 0.1, 'Essentials': 0.42},  # Increased rent
+    {'Age': 25, 'Income (USD)': 50000, 'Rent (USD)': 800, 'Groceries (USD)': 500, 'Eating Out (USD)': 200, 
+     'Income_on_Rent': 0.016, 'Savings': 0.1, 'Essentials': 0.45}   # Increased groceries
+]
+
+# Convert the simulated data to a DataFrame and scale it
+new_data_scenarios_df = pd.DataFrame(new_data_scenarios)
+new_data_scaled = scaler.transform(new_data_scenarios_df)
+
+# Predict for each scenario
+stacking_predictions = stacking_model.predict(new_data_scaled)
+
+for i, prediction in enumerate(stacking_predictions):
+    print(f"Prediction for Scenario {i + 1}: {prediction}")
