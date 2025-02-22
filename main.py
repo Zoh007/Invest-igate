@@ -7,14 +7,31 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import VotingClassifier
+from imblearn.over_sampling import RandomOverSampler
+from xgboost import XGBClassifier
+from imblearn.over_sampling import SMOTE
 
 app = FastAPI()
 
 # Load the dataset
 df = pd.read_csv('genz_money_spends.csv')
 
+#Adding ratios to better understand the model
+df['Income_on_Rent'] = df['Rent (USD)'] / df['Income (USD)']
+df['Savings'] = df['Savings (USD)'] / df['Income (USD)']
+df['Essentials'] = (df['Rent (USD)'] + df['Groceries (USD)']) / df[['Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Entertainment (USD)', 
+                     'Subscription Services (USD)', 'Education (USD)', 'Online Shopping (USD)', 
+                     'Savings (USD)', 'Investments (USD)', 'Travel (USD)', 'Fitness (USD)', 
+                     'Miscellaneous (USD)']].sum(axis=1)
+
+# print(df['Income_on_Rent'])
+# print(df['Savings'])
+# print(df['Essentials'])
+
+
 # Print the columns of the DataFrame to verify their names
-print("Columns in the dataset:", df.columns)
+# print("Columns in the dataset:", df.columns)
 
 # Create a 'Category' column by aggregating existing columns
 df['Category'] = df[['Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Entertainment (USD)', 
@@ -29,19 +46,37 @@ df['Category'] = pd.cut(df['Category'], bins=5, labels=False)
 X = df[['Age', 'Income (USD)', 'Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)']]  # Add more features
 y = df['Category']
 
+
+
+
 # Scale the features
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
 
 # Train-Test Split
-X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# To handle unbalanced datasets
+# smote = SMOTE(random_state=42, sampling_strategy='auto')
+# # print(y_train.value_counts())
+# X_train , y_train = smote.fit_resample(X_train, y_train)
+
+# ros = RandomOverSampler(random_state=42)
+# X_train, y_train = ros.fit_resample(X_train, y_train)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+
+xgb = XGBClassifier(n_estimators = 500, learning_rate = 0.8, random_state = 42)
+xgb.fit(X_train, y_train)
+
 
 # Model Selection and Training with increased max_iter and solver
-model = LogisticRegression(max_iter=1000, solver='lbfgs', class_weight='balanced')  # Adding class_weight
-model.fit(X_train, y_train)
+# model = LogisticRegression(max_iter=1000, solver='lbfgs', class_weight='balanced')  # Adding class_weight
+# model.fit(X_train, y_train)
 
 # Evaluation
-y_pred = model.predict(X_test)
+y_pred = xgb.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 print(f"Model Accuracy: {accuracy}")
 
@@ -52,6 +87,6 @@ print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
 # Prediction (example: predicting for a new data point)
 new_data = pd.DataFrame({'Age': [25], 'Income (USD)': [50000], 'Rent (USD)': [1000], 'Groceries (USD)': [300], 'Eating Out (USD)': [200]})
 new_data_scaled = scaler.transform(new_data)
-prediction = model.predict(new_data_scaled)
+prediction = xgb.predict(new_data_scaled)
 
 print(f"Prediction: {prediction}")
