@@ -15,33 +15,18 @@ app = FastAPI()
 
 # Load the dataset
 df = pd.read_csv('genz_money_spends.csv')
-# Investment as a proportion of total income
+
+# Feature Engineering
 df['Investments'] = df['Investments (USD)'] / df['Income (USD)']
-
-# Income out of Rent
-df['Income_on_Rent'] = df['Rent (USD)'] / df['Income (USD)']  # Use df['Savings (USD)'] directly
-
-# Savings out of income
-df['Savings'] = df['Savings (USD)'] / df['Income (USD)']  # Use df['Savings (USD)'] directly
-
-# Education expenses as a proportion of total income
+df['Income_on_Rent'] = df['Rent (USD)'] / df['Income (USD)']
+df['Savings'] = df['Savings (USD)'] / df['Income (USD)']
 df['Education'] = df['Education (USD)'] / df['Income (USD)']
-
-# Leisure as everything else (excluding Rent, Groceries, Investments, and Education)
 df['Leisure'] = df[['Eating Out (USD)', 'Entertainment (USD)', 'Subscription Services (USD)',
                      'Online Shopping (USD)', 'Travel (USD)', 'Fitness (USD)', 'Miscellaneous (USD)']].sum(axis=1) / df['Income (USD)']
 
-# Total Spending Category (optional if still needed)
-df['Category'] = df[['Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Entertainment (USD)', 
-                     'Subscription Services (USD)', 'Online Shopping (USD)', 
-                     'Savings (USD)', 'Travel (USD)', 'Fitness (USD)', 
-                     'Miscellaneous (USD)']].sum(axis=1)
-
-# After feature engineering, select the appropriate columns
-X = df[['Age', 'Investments','Income (USD)', 'Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Income_on_Rent', 'Savings', 'Leisure']]  # Add more features
-y = df['Category']
-
-
+# Now, let's structure the problem to predict 'Income (USD)' based on other features
+X = df[['Age', 'Investments', 'Rent (USD)', 'Groceries (USD)', 'Eating Out (USD)', 'Income_on_Rent', 'Savings', 'Leisure']]  # Features affecting income
+y = df['Income (USD)']  # Target variable
 
 # Train-Test Split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -92,8 +77,7 @@ plt.title("Feature Importance for Random Forest Model")
 plt.show()
 
 
-    
-# Sensitivity Analysis - Simulate different expense distributions and observe their impact
+# Sensitivity Analysis - Simulate different income distributions and observe their impact
 new_data_scenarios = [
     {'Age': 25, 'Income (USD)': 50000, 'Rent (USD)': 1000, 'Groceries (USD)': 300, 'Eating Out (USD)': 200, 
      'Income_on_Rent': 0.02, 'Savings': 0.1, 'Leisure': 0.4},  # baseline scenario
