@@ -30,7 +30,7 @@ st.set_page_config(page_title="AI Finance Assistant", layout="wide")
 
 # Sidebar
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Home", "Financial Overview", "Spending Recommendations", "Investments", "Debt Management", "Event Budgeting", "Tax Estimator", "Emergency Fund", "Net Worth", "FI Tracker", "Currency Converter", "Expense Trends"])
+page = st.sidebar.radio("Go to", ["Home", "Spending Recommendations", "Investments", "Debt Management", "Event Budgeting", "Tax Estimator", "Emergency Fund", "Net Worth", "FI Tracker", "Expense Trends"])
 
 # Home Page
 if page == "Home":
@@ -39,46 +39,9 @@ if page == "Home":
         Manage your finances smartly with AI-powered insights. Track income, analyze spending habits, set savings goals, 
         and visualize your financial health in real-time.
     """)
-    st.image("https://via.placeholder.com/800x400?text=Your+Financial+Dashboard", use_column_width=True)
+    
 
-# Financial Overview Page
-elif page == "Financial Overview":
-    st.title("📊 Financial Overview")
-    
-    # Input section
-    with st.form(key='financial_inputs'):
-        age = st.number_input("Age", min_value=18, max_value=120, value=30)
-        income = st.number_input("Monthly Income (USD)", min_value=0, value=3000)
-        rent = st.number_input("Monthly Rent (USD)", min_value=0, value=1000)
-        groceries = st.number_input("Monthly Groceries (USD)", min_value=0, value=300)
-        eating_out = st.number_input("Monthly Eating Out (USD)", min_value=0, value=150)
-        education = st.number_input("Monthly Education Expenses (USD)", min_value=0, value=200)
-        investments = st.number_input("Monthly Investments (USD)", min_value=0, value=150)
-        savings = st.number_input("Monthly Savings (USD)", min_value=0, value=200)
-        leisure = st.number_input("Monthly Leisure Spending (USD)", min_value=0, value=100)
-        
-        submit_button = st.form_submit_button("Generate Financial Overview")
-    
-    if submit_button:
-        # Process and display inputs
-        input_data = {
-            "Age": age,
-            "Income (USD)": income,
-            "Rent (USD)": rent,
-            "Groceries (USD)": groceries,
-            "Eating Out (USD)": eating_out,
-            "Education (USD)": education,
-            "Investments (USD)": investments,
-            "Savings (USD)": savings,
-            "Leisure (USD)": leisure
-        }
-        
-        st.write("### Processed Budget Information:")
-        st.table(pd.DataFrame([input_data]))
-        
-        # Display expense distribution
-        recommendations = generate_savings_recommendations(income)
-        plot_spending_distribution(income, recommendations)
+
 
 # Spending Recommendations Page
 elif page == "Spending Recommendations":
