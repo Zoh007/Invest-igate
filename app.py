@@ -34,7 +34,7 @@ page = st.sidebar.radio("Go to", ["Home", "Spending Recommendations", "Investmen
 
 # Home Page
 if page == "Home":
-    st.title("💰 Welcome to AI Finance Assistant")
+    st.title("💰 INVEST-IGATE")
     st.write("""
         Manage your finances smartly with AI-powered insights. Track income, analyze spending habits, set savings goals, 
         and visualize your financial health in real-time.
