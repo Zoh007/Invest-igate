@@ -10,6 +10,7 @@ from sklearn.linear_model import Lasso
 from sklearn.feature_selection import SelectKBest, f_regression
 import numpy as np
 import joblib
+import matplotlib.pyplot as plt
 
 app = FastAPI()
 
@@ -93,3 +94,18 @@ test_scenarios_scaled = scaler.transform(test_scenarios)
 stacking_predictions = stacking_model.predict(test_scenarios_scaled)
 for i, prediction in enumerate(stacking_predictions):
     print(f"Prediction for Scenario {i + 1}: {prediction}")
+
+
+
+# Predictions
+stacking_pred = stacking_model.predict(X_test)
+
+# Plotting the comparison between actual and predicted income
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, stacking_pred, color='blue', alpha=0.5)  # Scatter plot
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', lw=2)  # Line for perfect prediction
+plt.xlabel("Actual Income (USD)")
+plt.ylabel("Predicted Income (USD)")
+plt.title("Actual vs Predicted Income")
+plt.grid(True)
+plt.show()
