@@ -26,7 +26,7 @@ def plot_spending_distribution(income, recommendations):
     st.pyplot(fig)
 
 # Streamlit UI
-st.set_page_config(page_title="AI Finance Assistant", layout="wide")
+st.set_page_config(page_title="INVEST-IGATE", layout="wide")
 
 # Sidebar
 st.sidebar.title("Navigation")
